@@ -19,18 +19,21 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import React, { use, useEffect, useState } from "react";
+import React, { use, useEffect, useMemo, useState } from "react";
 import {
   fetchApi,
   getHours,
   getShift,
+  useAllmc,
+  useHost,
   useSite,
   useStatusMc,
 } from "../control/controller";
+import useSWR, { mutate } from "swr";
 
 import { Bar } from "react-chartjs-2";
 import { Machine } from "../interface/machine";
-import useSWR from "swr";
+import axios from "axios";
 
 const OeeChart = (props: { className: string }) => {
   return (
@@ -202,24 +205,22 @@ const HourChart = () => {
   return <Bar options={options} data={data} />;
 };
 
-const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
-  
-  // console.table(machineName);
-  let test = useStatusMc(1);
-  
-  let newData = machineName.map((data) => {
-    return { ...data, status: JSON.stringify(test.data !== undefined ? test.data.results[0].series[0].values[0][0] : null) };
-  });
-  // console.log(newData);
-
-  // console.log(test);
+const RenderTable = ({
+  machineName,
+  masterData,
+  mcData,
+}: {
+  machineName: Machine[];
+  masterData: any;
+  mcData: any;
+}) => {
   const columns = React.useMemo<ColumnDef<any>[]>(
     () => [
       {
         header: () => <span>Status</span>,
         accessorFn: (row: Machine) => {
-        // console.log(row);
-        return row.status
+          // console.log(row);
+          return row.status;
         },
         id: "Status",
         cell: (info) => {
@@ -316,10 +317,9 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
   const defaultData = React.useMemo(() => [], []);
   const dataQuery = useSWR(
     ["data", fetchDataOptions],
-    () => fetchApi(fetchDataOptions, newData),
-    { keepPreviousData: true,refreshInterval : 5000 }
+    () => fetchApi(fetchDataOptions, mcData),
+    { keepPreviousData: true, refreshInterval: 5000 }
   );
-
   const pagination = React.useMemo(
     () => ({
       pageIndex,
@@ -329,8 +329,8 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
   );
 
   const table = useReactTable({
+    // data: masterData ?? defaultData,
     data: dataQuery.data?.rows ?? defaultData,
-    // data: dataQuery.data?.rows ?? defaultData,
     columns,
     pageCount: dataQuery.data?.pageCount ?? -1,
     state: {
@@ -344,9 +344,9 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
   });
   return (
     <div className="mx-2">
-      {JSON.stringify(test.data)}
       <table className="mt-4 w-full border-4">
         <thead>
+          {/* <tr className="bg-green-100 ">Status</tr> */}
           {table.getHeaderGroups().map((headerGroup) => (
             <tr className="bg-green-100 " key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
@@ -373,8 +373,20 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
             </tr>
           ))}
         </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => {
+        <tbody className="text-center">
+          {
+            dataQuery.data?.rows.map(machine=> {
+
+              return <tr key={machine.id}><td>
+                {machine.status}
+                </td>
+                <td>{machine.line}</td>
+                <td>{machine.part}</td>
+                </tr>
+            })
+          }
+  
+          {/* {table.getRowModel().rows.map((row) => {
             return (
               <tr
                 key={row.id}
@@ -389,6 +401,7 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
                       style={{ fontSize: "1.58vh" }}
                       key={cell.id}
                     >
+                      {}
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -398,12 +411,11 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
                 })}
               </tr>
             );
-          })}
+          })} */}
         </tbody>
       </table>
-      <div className="h-2" />
-      <div className="flex items-center gap-2">
-        {/* <span className="flex items-center gap-1">
+
+      {/* <span className="flex items-center gap-1">
           <div>Page</div>
           <strong>
             {table.getState().pagination.pageIndex + 1} of{" "}
@@ -411,7 +423,7 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
           </strong>
         </span> */}
 
-        {/* <span className="flex items-center gap-1">
+      {/* <span className="flex items-center gap-1">
           | Go to page:
           <input
             type="number"
@@ -423,7 +435,6 @@ const RenderTable = ({ machineName }: { machineName: Machine[] }) => {
             className="border p-1 rounded w-16"
           />
         </span> */}
-      </div>
     </div>
   );
 };

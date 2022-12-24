@@ -1,13 +1,21 @@
-import useSWR, { Fetcher, Key } from "swr";
+import useSWR, { Fetcher, Key, mutate } from "swr";
 
 import { Machine } from "../interface/machine";
 import axios from "axios";
 import dayjs from "dayjs";
 import { useRouter } from "next/router";
 
-const fetcher: Fetcher<any, string> = (url) =>{
- return  axios.get(url).then((res) => res.data);
+const fetcher: Fetcher<any, string> = (url) => {
+  return axios.get(url).then((res) => res.data);
+};
+function multiFetcher(urls: any) {
+  return Promise.all(
+    urls.map((url: any) => {
+      return fetcher(url);
+    })
+  );
 }
+
 const useSite = () => {
   const router = useRouter();
 
@@ -15,8 +23,6 @@ const useSite = () => {
   return (site as string)?.toUpperCase();
 };
 const useHost = () => {
-  const router = useRouter();
-
   const origin =
     typeof window !== "undefined" && window.location.origin
       ? window.location.origin
@@ -72,32 +78,58 @@ const getHours = () => {
   ];
 };
 
-const fetchApi = (options: { pageIndex: number; pageSize: number },data : Machine[]) => {
-  // Simulate some network latency
-  // let i = 0;
-  // let data = [];
-  // while (i < 60) {
-  //   i++;
-  //   data.push({
-  //     firstName: `TTest${i}`,
-  //     lastName: "LAST",
-  //   });
-  // }
-  let cloneData = [...data];
+const fetchApi = (
+  options: { pageIndex: number; pageSize: number },
+  data: any
+) => {
+  const rows = data.slice(
+    options.pageIndex * options.pageSize,
+    (options.pageIndex + 1) * options.pageSize
+  );
   return {
-    old: cloneData,
-    rows: data.slice(
-      options.pageIndex * options.pageSize,
-      (options.pageIndex + 1) * options.pageSize
-    ),
+    rows: [...rows],
     pageCount: Math.ceil(data.length / options.pageSize),
   };
 };
 
-const useStatusMc = () => {
-  
-  const { data, error, isLoading } = useSWR( useHost()+"/api/getStatus?site=aa&area=mca&line=a1", fetcher, { refreshInterval: 5000 });
-  return {data,error,isLoading}
+const useAllmc = (url: string[]) => {
+  return useSWR(url, multiFetcher, {
+    refreshInterval: 5000,
+  });
+};
+const useStatusMc = ({
+  site,
+  line,
+  area,
+}: {
+  site: string;
+  line: string;
+  area: string;
+}) => {
+  const { data, error, isLoading } = useSWR(
+    useHost() + `/api/getStatus?site=${site}&area=${area}&line=${line}`,
+    fetcher,
+    { refreshInterval: 5000 }
+  );
+  return { data, error, isLoading };
 };
 
-export { getShift, useSite, getHours, fetchApi,useHost ,useStatusMc};
+const useData = (machine: any) => {
+  const { data, error, isLoading } = useSWR(
+    useHost() + `/api/intervalData?machine=${JSON.stringify(machine)}`,
+    fetcher
+    // { refreshInterval: 5000 }
+  );
+  return { data, error, isLoading };
+};
+
+export {
+  getShift,
+  useSite,
+  getHours,
+  fetchApi,
+  useHost,
+  useStatusMc,
+  useData,
+  useAllmc,
+};

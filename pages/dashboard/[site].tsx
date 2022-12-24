@@ -5,27 +5,73 @@ import {
   RenderTable,
   SumProduct,
 } from "../../model/dashboard";
-import { getShift, useSite } from "../../control/controller";
+import {
+  getShift,
+  useAllmc,
+  useData,
+  useHost,
+  useSite,
+} from "../../control/controller";
 import { useEffect, useMemo } from "react";
 
 import Head from "next/head";
 import Image from "next/image";
 import { Inter } from "@next/font/google";
 import { Machine } from "../../interface/machine";
+import { SWRConfig } from "swr";
 import axios from "axios";
 import styles from "../styles/Home.module.css";
 import { useRouter } from "next/router";
 
-export default function Dashboard(props: {
-  machineName : Machine[]
+export default function Page(props: {
+  machineName: Machine[];
+  fallback: any;
+  intervalData: [];
+  machineArr: [];
+}) {
+  // SWR hooks inside the `SWRConfig` boundary will use those values.
+
+  return (
+    <SWRConfig
+      value={
+        {
+          // fallback: props.fallback,
+          // fallbackData: props.intervalData,
+          // refreshInterval: 5000,
+        }
+      }
+    >
+      <Dashboard {...props} />
+    </SWRConfig>
+  );
+}
+export function Dashboard(props: {
+  machineArr: any;
+  machineName: Machine[];
+  intervalData?: [];
 }) {
   const site = useSite();
   const shift = getShift();
-  // console.log(props);
-  // console.table(props.machineName);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-  }, []);
+  // const { data } = useData(props.machineName);
+
+  let machineName = props.machineArr;
+  let statusUrl: string[] = [];
+  const host = useHost();
+  for (let i = 0; i < machineName.length; i++) {
+    statusUrl.push(
+      host +
+        `/api/getStatus?site=${machineName[i].site}&area=${machineName[i].aera}&line=${machineName[i].line}`
+    );
+  }
+
+  const statusMc = useAllmc(statusUrl);
+  if (statusMc.data) {
+    for (let i = 0; i < machineName.length; i++) {
+      machineName[i].status = statusMc.data[i].status;
+      machineName[i].part = statusMc.data[i].part;
+    }
+  }
+
   return (
     <>
       <Head>
@@ -34,6 +80,7 @@ export default function Dashboard(props: {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
       <div className="w-screen h-screen bg-red-50 relative overflow-hidden">
         <div
           className=" bg-blue-900  text-white  flex justify-center items-center "
@@ -77,7 +124,11 @@ export default function Dashboard(props: {
           </div>
 
           <div className=" flex-1 ">
-            <RenderTable machineName={props.machineName}/>
+            <RenderTable
+              machineName={props.machineName}
+              masterData={[]} // use for ssr render
+              mcData={machineName}
+            />
           </div>
         </div>
       </div>
@@ -94,19 +145,32 @@ export async function getServerSideProps(context: any) {
   );
   let newMachine: Machine[] = [];
   for (let i = 0; i < machineName.data.data.length; i++) {
+    delete machineName.data.data[i].attributes.createdAt;
+    delete machineName.data.data[i].attributes.updatedAt;
     newMachine.push({
       id: machineName.data.data[i].id,
       ...machineName.data.data[i].attributes,
     });
+
+    //TODO: fetch all data in here and useSWR to refreashData
   }
-  
-  
+
+  // let getData = await axios.get(
+  //   `http://${host}/api/intervalData?machine=${JSON.stringify(newMachine)}`
+  // );
+
   const res = await axios.get(`http://${host}/api/getFile/${site}`); // check Json file and Add
+
   return {
     props: {
       host: host || null,
       data: res.data,
+      // intervalData: getData.data,
       machineName: newMachine,
+      machineArr: newMachine,
+      // fallback: {
+      //   "/api/intervalData": getData.data,
+      // },
     }, // will be passed to the page component as props
   };
 }
