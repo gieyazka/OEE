@@ -35,11 +35,11 @@ import { Bar } from "react-chartjs-2";
 import { Machine } from "../interface/machine";
 import axios from "axios";
 
-const OeeChart = (props: { className: string }) => {
+const OeeChart = (props: { className: string ,avgPercentage : number}) => {
   return (
     <div className={props.className}>
       <CircularProgressbarWithChildren
-        value={40}
+        value={props.avgPercentage}
         circleRatio={0.65}
         styles={buildStyles({
           rotation: 0.675,
@@ -48,7 +48,7 @@ const OeeChart = (props: { className: string }) => {
           pathColor: "green",
         })}
       >
-        <strong className="text-3xl">20%</strong>
+        <strong className="text-3xl">{props.avgPercentage}%</strong>
         <strong className="absolute bottom-8 text-lg">OEE</strong>
       </CircularProgressbarWithChildren>
     </div>
@@ -60,7 +60,7 @@ const SumProduct = () => {
     <div className=" text-center">
       <strong className=" text-2xl">Production Summary</strong>
       <div className="flex flex-col ">
-        <div className="flex justify-between ">
+        <div className="flex justify-between">
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
             Target
           </p>
@@ -229,6 +229,15 @@ const RenderTable = ({
         footer: (props) => props.column.id,
       },
       {
+        header: () => <span>Area</span>,
+        accessorFn: (row) => <div>{row.line}</div>,
+        id: "Area",
+        cell: (info) => {
+          return info.getValue();
+        },
+        footer: (props) => props.column.id,
+      },
+      {
         header: () => <span>Machine</span>,
         accessorFn: (row) => <div>{row.line}</div>,
         id: "Machine",
@@ -318,7 +327,7 @@ const RenderTable = ({
   const dataQuery = useSWR(
     ["data", fetchDataOptions],
     () => fetchApi(fetchDataOptions, mcData),
-    { keepPreviousData: true, refreshInterval: 5000 }
+    { keepPreviousData: true}
   );
   const pagination = React.useMemo(
     () => ({
@@ -374,18 +383,24 @@ const RenderTable = ({
           ))}
         </thead>
         <tbody className="text-center">
-          {
-            dataQuery.data?.rows.map(machine=> {
-
-              return <tr key={machine.id}><td>
-                {machine.status}
-                </td>
+          {dataQuery.data?.rows.map((machine) => {
+            return (
+              <tr key={machine.id}>
+                <td>{machine.status}</td>
+                <td>{machine.aera}</td>
                 <td>{machine.line}</td>
                 <td>{machine.part}</td>
-                </tr>
-            })
-          }
-  
+                <td>{machine.target}</td>
+                <td>{machine.plan}</td>
+                <td>{machine.actual}</td>
+                <td>Start</td>
+                <td>{machine.produceTime}</td>
+                <td>{machine.oee}{(typeof machine.oee) === 'number' && '%'}</td>
+                {/* <td>{machine.actual - machine.plan}</td> */}
+              </tr>
+            );
+          })}
+
           {/* {table.getRowModel().rows.map((row) => {
             return (
               <tr

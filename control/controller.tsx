@@ -94,7 +94,7 @@ const fetchApi = (
 
 const useAllmc = (url: string[]) => {
   return useSWR(url, multiFetcher, {
-    refreshInterval: 5000,
+    refreshInterval: 30000,
   });
 };
 const useStatusMc = ({

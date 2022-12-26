@@ -56,21 +56,53 @@ export function Dashboard(props: {
 
   let machineName = props.machineArr;
   let statusUrl: string[] = [];
+  let produceUrl: string[] = [];
+  let OeeUrl: string[] = [];
   const host = useHost();
   for (let i = 0; i < machineName.length; i++) {
     statusUrl.push(
       host +
         `/api/getStatus?site=${machineName[i].site}&area=${machineName[i].aera}&line=${machineName[i].line}`
     );
+    produceUrl.push(
+      host +
+        `/api/getProduce?site=${machineName[i].site}&area=${machineName[i].aera}&line=${machineName[i].line}`
+    );
+    OeeUrl.push(
+      host +
+        `/api/getOee?site=${machineName[i].site}&area=${machineName[i].aera}&line=${machineName[i].line}`
+    );
   }
 
   const statusMc = useAllmc(statusUrl);
-  if (statusMc.data) {
-    for (let i = 0; i < machineName.length; i++) {
-      machineName[i].status = statusMc.data[i].status;
-      machineName[i].part = statusMc.data[i].part;
+  const produceMc = useAllmc(produceUrl);
+  const oeeMc = useAllmc(OeeUrl);
+  let sumPercentage = 0;
+  let noData = 0;
+  let avgPercentage: number | null = null;
+  // if (statusMc.data) {
+  for (let i = 0; i < machineName.length; i++) {
+    machineName[i].status = statusMc.data && statusMc.data[i].status;
+    machineName[i].part = statusMc.data && statusMc.data[i].part;
+    machineName[i].actual = statusMc.data && statusMc.data[i].actual;
+    machineName[i].target = statusMc.data && statusMc.data[i].target;
+    machineName[i].plan = statusMc.data && statusMc.data[i].plan;
+    machineName[i].produceTime =
+      produceMc.data && produceMc.data[i].produceTime;
+    if (oeeMc.data) {
+      machineName[i].oee = oeeMc.data && oeeMc.data[i].oee;
+      if (typeof oeeMc.data[i].oee === "number") {
+        sumPercentage += oeeMc.data[i].oee;
+      } else {
+        noData += 1;
+        sumPercentage += 0;
+      }
     }
   }
+
+  avgPercentage = Math.round(sumPercentage / (machineName.length - noData));
+
+  // }
 
   return (
     <>
@@ -101,16 +133,19 @@ export function Dashboard(props: {
             }}
           >
             <div style={{ width: "25vh" }}>
-              <OeeChart className=" mt-6 mx-auto" />
+              <OeeChart
+                avgPercentage={avgPercentage}
+                className=" mt-6 mx-auto"
+              />
             </div>
             <div
-              className=" w-full px-8 overflow-hidden "
+              className=" w-full px-8 overflow-hidden  whitespace-nowrap"
               style={{ maxHeight: "15vh" }}
             >
               <SumProduct />
             </div>
             <div
-              className=" mt-4 w-full px-8 overflow-hidden"
+              className=" mt-4 w-full px-8 overflow-hidden  whitespace-nowrap"
               style={{ maxHeight: "15vh" }}
             >
               <MachineStatus />
@@ -154,10 +189,6 @@ export async function getServerSideProps(context: any) {
 
     //TODO: fetch all data in here and useSWR to refreashData
   }
-
-  // let getData = await axios.get(
-  //   `http://${host}/api/intervalData?machine=${JSON.stringify(newMachine)}`
-  // );
 
   const res = await axios.get(`http://${host}/api/getFile/${site}`); // check Json file and Add
 
