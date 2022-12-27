@@ -6,6 +6,8 @@ import {
   SumProduct,
 } from "../../model/dashboard";
 import {
+  getHours,
+  getHoursTime,
   getShift,
   useAllmc,
   useData,
@@ -20,6 +22,7 @@ import { Inter } from "@next/font/google";
 import { Machine } from "../../interface/machine";
 import { SWRConfig } from "swr";
 import axios from "axios";
+import dayjs from "dayjs";
 import styles from "../styles/Home.module.css";
 import { useRouter } from "next/router";
 
@@ -80,6 +83,17 @@ export function Dashboard(props: {
   let sumPercentage = 0;
   let noData = 0;
   let avgPercentage: number | null = null;
+  let sumData = {
+    target: 0,
+    plan: 0,
+    actual: 0,
+  };
+  let sumMachine = {
+    total: statusMc.data ? statusMc.data.length : 0,
+    running: 0,
+    idle: 0,
+    stop: 0,
+  };
   // if (statusMc.data) {
   for (let i = 0; i < machineName.length; i++) {
     machineName[i].status = statusMc.data && statusMc.data[i].status;
@@ -89,6 +103,26 @@ export function Dashboard(props: {
     machineName[i].plan = statusMc.data && statusMc.data[i].plan;
     machineName[i].produceTime =
       produceMc.data && produceMc.data[i].produceTime;
+
+    if (statusMc.data) {
+      if (typeof statusMc.data[i].target === "number") {
+        sumData.target += statusMc.data[i].target;
+      }
+      if (typeof statusMc.data[i].plan === "number") {
+        sumData.plan += statusMc.data[i].plan;
+      }
+      if (typeof statusMc.data[i].plan === "number") {
+        sumData.actual += statusMc.data[i].actual;
+      }
+      if (statusMc.data[i].status === "execute") {
+        sumMachine.running += 1;
+      } else if (statusMc.data[i].status === "breakdown") {
+        sumMachine.stop += 1;
+      } else {
+        sumMachine.idle += 1;
+      }
+    }
+
     if (oeeMc.data) {
       machineName[i].oee = oeeMc.data && oeeMc.data[i].oee;
       if (typeof oeeMc.data[i].oee === "number") {
@@ -142,13 +176,13 @@ export function Dashboard(props: {
               className=" w-full px-8 overflow-hidden  whitespace-nowrap"
               style={{ maxHeight: "15vh" }}
             >
-              <SumProduct />
+              <SumProduct sumData={sumData} />
             </div>
             <div
               className=" mt-4 w-full px-8 overflow-hidden  whitespace-nowrap"
               style={{ maxHeight: "15vh" }}
             >
-              <MachineStatus />
+              <MachineStatus sumMachine={sumMachine} />
             </div>
             <div
               className=" mt-4 mb-2 w-full  flex justify-center overflow-hidden flex-1"
@@ -176,7 +210,7 @@ export async function getServerSideProps(context: any) {
   const site = (context.query.site as string).toUpperCase();
 
   const machineName = await axios.get(
-    `http://10.20.10.209:1337/api/equipments?site=${site}`
+    `http://10.20.10.209:1337/api/equipments?filters[site][$eq]=${site}`
   );
   let newMachine: Machine[] = [];
   for (let i = 0; i < machineName.data.data.length; i++) {
@@ -191,6 +225,17 @@ export async function getServerSideProps(context: any) {
   }
 
   const res = await axios.get(`http://${host}/api/getFile/${site}`); // check Json file and Add
+  const labels = getHours();
+  // console.log(labels);
+  for (let i = 0; i < res.data.hours.length; i++) {
+   if(res.data.hours[i].data == null){
+    // console.log(res.data.hours[i]);
+    
+    console.log(getHoursTime(res.data.hours[i].time))
+   }
+    
+  }
+  // console.log(dayjs().format('h A'));
 
   return {
     props: {

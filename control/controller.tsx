@@ -122,7 +122,18 @@ const useData = (machine: any) => {
   );
   return { data, error, isLoading };
 };
-
+const getHoursTime = (ampm: string) => {
+  let hr = dayjs(`1/1/1 ${ampm.split(" ")[0]}:00 ${ampm.split(" ")[1]}`).format(
+    "HH"
+  );
+  let today = dayjs().hour(parseInt(hr));
+  let startTime = today.minute(0).second(0).valueOf();
+  let endTime = today.minute(0).second(0).valueOf();
+  return {
+    startTime,
+    endTime,
+  };
+};
 export {
   getShift,
   useSite,
@@ -132,4 +143,5 @@ export {
   useStatusMc,
   useData,
   useAllmc,
+  getHoursTime,
 };

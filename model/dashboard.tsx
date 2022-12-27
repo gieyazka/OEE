@@ -35,7 +35,7 @@ import { Bar } from "react-chartjs-2";
 import { Machine } from "../interface/machine";
 import axios from "axios";
 
-const OeeChart = (props: { className: string ,avgPercentage : number}) => {
+const OeeChart = (props: { className: string; avgPercentage: number }) => {
   return (
     <div className={props.className}>
       <CircularProgressbarWithChildren
@@ -45,7 +45,12 @@ const OeeChart = (props: { className: string ,avgPercentage : number}) => {
           rotation: 0.675,
           strokeLinecap: "butt",
           trailColor: "#eee",
-          pathColor: "green",
+          pathColor:
+            props.avgPercentage >= 60
+              ? "#2e8f69"
+              : props.avgPercentage >= 40
+              ? "#ffe599"
+              : "#cc0000",
         })}
       >
         <strong className="text-3xl">{props.avgPercentage}%</strong>
@@ -55,7 +60,9 @@ const OeeChart = (props: { className: string ,avgPercentage : number}) => {
   );
 };
 
-const SumProduct = () => {
+const SumProduct = (props: {
+  sumData: { target: number; plan: number; actual: number };
+}) => {
   return (
     <div className=" text-center">
       <strong className=" text-2xl">Production Summary</strong>
@@ -65,7 +72,7 @@ const SumProduct = () => {
             Target
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+            {props.sumData.target}
           </p>
         </div>
         <div className="flex justify-between ">
@@ -73,7 +80,7 @@ const SumProduct = () => {
             Plan
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+            {props.sumData.plan}
           </p>
         </div>{" "}
         <div className="flex justify-between ">
@@ -81,7 +88,7 @@ const SumProduct = () => {
             Actual
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+            {props.sumData.actual}
           </p>
         </div>{" "}
         <div className="flex justify-between ">
@@ -89,7 +96,7 @@ const SumProduct = () => {
             Diff.
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+            {props.sumData.actual - props.sumData.plan}
           </p>
         </div>
       </div>
@@ -97,7 +104,9 @@ const SumProduct = () => {
   );
 };
 
-const MachineStatus = () => {
+const MachineStatus = (props: {
+  sumMachine: { total: number; running: number; idle: number; stop: number };
+}) => {
   return (
     <div className="text-center">
       <strong className=" text-2xl  mx-auto">Machine Status</strong>
@@ -107,7 +116,7 @@ const MachineStatus = () => {
             Machine Total
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+            {props.sumMachine.total}
           </p>
         </div>
         <div className="flex justify-between ">
@@ -115,7 +124,7 @@ const MachineStatus = () => {
             Running
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+          {props.sumMachine.running}
           </p>
         </div>{" "}
         <div className="flex justify-between ">
@@ -123,7 +132,7 @@ const MachineStatus = () => {
             Idle
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+          {props.sumMachine.idle}
           </p>
         </div>{" "}
         <div className="flex justify-between ">
@@ -131,7 +140,7 @@ const MachineStatus = () => {
             Stop
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-            Value
+          {props.sumMachine.stop}
           </p>
         </div>
       </div>
@@ -165,18 +174,19 @@ const HourChart = () => {
       },
       title: {
         display: true,
-        text: "Chart.js Horizontal Bar Chart",
+        text: "A/P Chart",
       },
     },
   };
 
   const labels = getHours();
-
+  // console.log(labels);
+  
   const data = {
     labels,
     datasets: [
       {
-        label: "Dataset 1",
+        label: "A",
         data: [
           [0, 5],
           [0, 5],
@@ -195,7 +205,7 @@ const HourChart = () => {
         backgroundColor: "rgba(255, 99, 132, 0.5)",
       },
       {
-        label: "Dataset 2",
+        label: "P",
         data: labels.map(() => [0, 100]), // array of array
         borderColor: "rgb(53, 162, 235)",
         backgroundColor: "rgba(53, 162, 235, 0.5)",
@@ -327,7 +337,7 @@ const RenderTable = ({
   const dataQuery = useSWR(
     ["data", fetchDataOptions],
     () => fetchApi(fetchDataOptions, mcData),
-    { keepPreviousData: true}
+    { keepPreviousData: true }
   );
   const pagination = React.useMemo(
     () => ({
@@ -395,7 +405,10 @@ const RenderTable = ({
                 <td>{machine.actual}</td>
                 <td>Start</td>
                 <td>{machine.produceTime}</td>
-                <td>{machine.oee}{(typeof machine.oee) === 'number' && '%'}</td>
+                <td>
+                  {machine.oee}
+                  {typeof machine.oee === "number" && "%"}
+                </td>
                 {/* <td>{machine.actual - machine.plan}</td> */}
               </tr>
             );
