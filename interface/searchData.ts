@@ -8,3 +8,10 @@ export interface searchData {
   endHr: string | null;
   endMin: string | null;
 }
+
+
+
+export interface filterData {
+  machine: string[],
+  shift: string | null,
+}

@@ -1,19 +1,25 @@
 import Autocomplete, {
   AutocompleteRenderInputParams,
 } from "@mui/material/Autocomplete";
+import { filterData, searchData } from "../interface/searchData";
 
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { Dayjs } from "dayjs";
 import { HTMLAttributes } from "react";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { Production_Line } from "../interface/machine";
 import TextField from "@mui/material/TextField";
-import { searchData } from "../interface/searchData";
 
 interface input {
   label: string;
   state: [searchData, React.Dispatch<React.SetStateAction<searchData>>];
   type: string;
+}
+interface multiSelect {
+  label: string;
+  state: [filterData, React.Dispatch<React.SetStateAction<filterData>>];
+  mcData?: Production_Line[] | null;
 }
 
 const MuiDatePicker = ({ state, label, type }: input) => {
@@ -111,6 +117,41 @@ const SelectMinute = ({ label, state, type }: input) => {
   );
 };
 
+const SelectMulti = ({ label, state, mcData }: multiSelect) => {
+  const [value, setValue] = [...state];
+  let mcNameArr = [...new Set(mcData?.map((d) => d.Alias_Name))];
+
+  return (
+    <Autocomplete
+      multiple
+      onChange={(e: React.SyntheticEvent, data: string[]) => {
+        setValue({ ...value, machine: data });
+      }}
+      fullWidth
+      options={mcNameArr.map((option) => option.toString())}
+      renderOption={renderOption}
+      value={value.machine}
+      renderInput={(params) => <TextField key={params.id} {...params} label={label} />}
+    />
+  );
+};
+const SelectShift = ({ label, state }: multiSelect) => {
+  const [value, setValue] = [...state];
+
+  return (
+    <Autocomplete
+      onChange={(e: React.SyntheticEvent, data: string | null) => {
+        setValue({ ...value, shift: data });
+      }}
+      fullWidth
+      options={["Morning", "Evening"].map((option) => option.toString())}
+      renderOption={renderOption}
+      value={value.shift}
+      renderInput={(params) => <TextField {...params} label={label} />}
+    />
+  );
+};
+
 const hour = Array.from(Array(24).keys());
 const minute = Array.from(Array(60).keys());
 const renderOption = (props: HTMLAttributes<HTMLLIElement>, option: string) => {
@@ -121,4 +162,4 @@ const renderOption = (props: HTMLAttributes<HTMLLIElement>, option: string) => {
   );
 };
 
-export { SelectHour, SelectMinute, MuiDatePicker };
+export { SelectHour, SelectMinute, MuiDatePicker, SelectMulti, SelectShift };

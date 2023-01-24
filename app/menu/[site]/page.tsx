@@ -1,24 +1,36 @@
 "use client";
 
-import { Button, Snackbar } from "@mui/material";
+import { Button, Menu, MenuItem, Snackbar } from "@mui/material";
 import MuiAlert, { AlertProps } from "@mui/material/Alert";
 import {
   MuiDatePicker,
   SelectHour,
   SelectMinute,
-} from "../../../model/TimeSelect";
+  SelectMulti,
+  SelectShift,
+} from "../../../model/exportSelect";
 import dayjs, { Dayjs } from "dayjs";
+import { filterData, searchData } from "../../../interface/searchData";
 
 import { Production_Line } from "../../../interface/machine";
 import React from "react";
 import { RenderExportTable } from "../../../model/table_export";
 import { exportCSVFile } from "../../../control/export";
 import { fetchProduction_Time } from "../../../control/api";
+import { matchSorter } from "match-sorter";
 import { removeAttrlvl_one } from "../../../control/controller";
-import { searchData } from "../../../interface/searchData";
 import { snackBarType } from "../../../interface/snackbar";
 
-export default function Menu(props: { params: { site: string } }) {
+export default function MenuPage(props: { params: { site: string } }) {
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  // const handleClose = () => {
+  //   setAnchorEl(null);
+  // };
+
   const [searchData, setSearchData] = React.useState<Production_Line[] | []>(
     []
   );
@@ -56,6 +68,10 @@ export default function Menu(props: { params: { site: string } }) {
     endHr: null,
     endMin: null,
   });
+  const [filter, setFilter] = React.useState<filterData>({
+    machine: [],
+    shift: null,
+  });
 
   const onDownloadClick = async () => {
     if (searchData.length === 0) {
@@ -81,15 +97,15 @@ export default function Menu(props: { params: { site: string } }) {
 
     let startHr = search.startHr ? parseInt(search.startHr) : 0;
     let startMin = search.startMin ? parseInt(search.startMin) : 0;
-    let startDate = search.startDate.minute(startMin).hour(startHr);
+    let startDate = search.startDate.hour(startHr).minute(startMin);
 
     let endHr = search.endHr ? parseInt(search.endHr) : 0;
     let endMin = search.startMin ? parseInt(search.startMin) : 0;
-    let endDate = search.endDate.minute(endHr).hour(endMin);
+    let endDate = search.endDate.hour(endHr).minute(endMin);
     if (startDate.valueOf() > endDate.valueOf()) {
       openSnackbar({
         open: true,
-        message: "End time is more than start time",
+        message: "Start time is more than end time",
         type: "error",
       });
       return;
@@ -105,6 +121,38 @@ export default function Menu(props: { params: { site: string } }) {
       return;
     }
     setSearchData(productionData);
+  };
+  const filterData = () => {
+    const data = searchData.filter((d) => {
+      if (filter.machine.length === 0 && filter.shift === null) {
+        return true;
+      } // no Filter
+      if (filter.machine.includes(d.Alias_Name)  &&  filter.shift === null) {
+        return true;
+      }
+      
+      let startTime = dayjs(d.Start).hour();
+      if (filter.shift === "Morning") {
+        
+
+        if (startTime > 7 && startTime < 20 && filter.machine.includes(d.Alias_Name)) {
+          return true;
+        }
+        return false;
+      }
+      if (filter.shift === "Evening") {
+        console.log(132);
+        if (startTime > 19 && startTime < 8 && filter.machine.includes(d.Alias_Name)) {
+          return true;
+        }
+        return false;
+      }
+      return false;
+    });
+
+    return data.sort((a, b) => {
+      return a.id - b.id;
+    });
   };
 
   return (
@@ -126,6 +174,30 @@ export default function Menu(props: { params: { site: string } }) {
           {snackBar.message}
         </Alert>
       </Snackbar>
+      <Menu
+        id="basic-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={() => setAnchorEl(null)}
+        MenuListProps={{
+          "aria-labelledby": "basic-button",
+        }}
+      >
+        <div className=" p-4" style={{ width: "45vw" }}>
+          <div className="flex " style={{ alignItems: "center" }}>
+            <span className=" basis-1/4">Machine name : </span>{" "}
+            <SelectMulti
+              mcData={searchData}
+              label="Select machine name"
+              state={[filter, setFilter]}
+            />
+          </div>
+          <div className="flex mt-3" style={{ alignItems: "center" }}>
+            <span className=" basis-1/4">Shift : </span>{" "}
+            <SelectShift label="Select Shift" state={[filter, setFilter]} />
+          </div>
+        </div>
+      </Menu>
       <div className="flex flex-1 justify-end items-center">
         <div className="flex justify-end items-center border-black border-2 rounded-md px-4 py-2  ">
           <span className="mx-2">Start : </span>
@@ -185,10 +257,24 @@ export default function Menu(props: { params: { site: string } }) {
             Download
           </Button>
         </div>
+        <div className=" ml-4">
+          <Button
+            className="mr-4 bg-blue-500"
+            id="basic-button"
+            variant="contained"
+            // aria-controls={open ? "basic-menu" : undefined}
+            // aria-haspopup="true"
+            // aria-expanded={open ? "true" : undefined}
+            onClick={handleClick}
+          >
+            Filter
+          </Button>
+        </div>
       </div>
-      {searchData.length !== 0 && (
+
+      {filterData().length !== 0 && (
         <div className=" overflow-auto  h-5/6 relative mt-2 ">
-          <RenderExportTable productionData={searchData} />
+          <RenderExportTable productionData={filterData()} />
         </div>
       )}
     </div>
