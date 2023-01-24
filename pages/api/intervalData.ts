@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import axios from 'axios';
+import { getInfluxServer } from '../../control/controller';
 
 export default async function handler(
     req: NextApiRequest,
@@ -20,10 +21,10 @@ export default async function handler(
 
             arrMc[i].status = (await getMcStatus(site, line, aera))
             // if (arrMc[i].status === "stopped" || arrMc[i].status === "No data") {
-                
+
             //     arrMc[i].partName = ""
             // } else {
-                arrMc[i].partName = (await getPartName(site, line, aera))
+            arrMc[i].partName = (await getPartName(site, line, aera))
             // }
         }
         // console.log(arrMc);
@@ -37,13 +38,15 @@ export default async function handler(
 
 
 const getMcStatus = async (site: string, line: string, area: string) => {
+    const {server,token} = getInfluxServer(site as String)
+
     let query = `SELECT last("status")  FROM "Performance" WHERE ("Area" = '${(area as string).toUpperCase()}') AND  ("Site" = '${(site as string).toUpperCase()}') AND  ("Line" = '${(line as string).toUpperCase()}') AND time >= now() - 10s AND time <= now() GROUP BY time(1s) fill(none)`;
     let status = {
         method: "post",
-        url: `http://10.20.10.209:8086/query?db=smart_factory&q=${query}`,
+        url: `${server}/query?db=smart_factory&q=${query}`,
         headers: {
             Authorization:
-                "Token 4GES3Ky0_YZujUlsEEwpJ3lXdlqkfSyOJShxy9LOOE6FvDpQUZexbPmivibaFY8yeGQVbHEMvkQNFfzcWeuNNg==",
+                `Token ${token}`,
         },
     };
 
@@ -56,19 +59,21 @@ const getMcStatus = async (site: string, line: string, area: string) => {
 
 }
 export const getPartName = async (site: string, line: string, area: string) => {
+    const {server,token} = getInfluxServer(site as String)
+
     let query = `SELECT last("part_name") FROM "Performance"  WHERE ("Area" = '${(area as string).toUpperCase()}') AND  ("Site" = '${(site as string).toUpperCase()}') AND  ("Line" = '${(line as string).toUpperCase()}') AND time >= now() - 10s AND time <= now() GROUP BY time(1s) fill(none)`;
     let status = {
         method: "post",
-        url: `http://10.20.10.209:8086/query?db=smart_factory&q=${query}`,
+        url: `${server}/query?db=smart_factory&q=${query}`,
         headers: {
             Authorization:
-                "Token 4GES3Ky0_YZujUlsEEwpJ3lXdlqkfSyOJShxy9LOOE6FvDpQUZexbPmivibaFY8yeGQVbHEMvkQNFfzcWeuNNg==",
+                `Token ${token}`,
         },
     };
 
     let getstatus = await axios(status);
     // console.log(line,getstatus.data);
-    
+
     if (getstatus.data.results[0].series === undefined) {
         return "No data"
     }

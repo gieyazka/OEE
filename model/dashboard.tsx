@@ -23,11 +23,9 @@ import React, { use, useEffect, useMemo, useState } from "react";
 import {
   fetchApi,
   getHours,
-  getShift,
-  useAllmc,
+  getStartTime,
   useHost,
   useSite,
-  useStatusMc,
 } from "../control/controller";
 import useSWR, { mutate } from "swr";
 
@@ -105,7 +103,13 @@ const SumProduct = (props: {
 };
 
 const MachineStatus = (props: {
-  sumMachine: { total: number; running: number; idle: number; stop: number };
+  sumMachine: {
+    total: number;
+    running: number;
+    idle: number;
+    stop: number;
+    planDowntime: number;
+  };
 }) => {
   return (
     <div className="text-center">
@@ -124,7 +128,15 @@ const MachineStatus = (props: {
             Running
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-          {props.sumMachine.running}
+            {props.sumMachine.running}
+          </p>
+        </div>{" "}
+        <div className="flex justify-between ">
+          <p style={{ fontSize: "1.5vh" }} className="font-semibold">
+            Plan DownTime
+          </p>
+          <p style={{ fontSize: "1.5vh" }} className="font-semibold">
+            {props.sumMachine.planDowntime}
           </p>
         </div>{" "}
         <div className="flex justify-between ">
@@ -132,7 +144,7 @@ const MachineStatus = (props: {
             Idle
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-          {props.sumMachine.idle}
+            {props.sumMachine.idle}
           </p>
         </div>{" "}
         <div className="flex justify-between ">
@@ -140,7 +152,7 @@ const MachineStatus = (props: {
             Stop
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
-          {props.sumMachine.stop}
+            {props.sumMachine.stop}
           </p>
         </div>
       </div>
@@ -181,7 +193,7 @@ const HourChart = () => {
 
   const labels = getHours();
   // console.log(labels);
-  
+
   const data = {
     labels,
     datasets: [
@@ -239,7 +251,7 @@ const RenderTable = ({
         footer: (props) => props.column.id,
       },
       {
-        header: () => <span>Area</span>,
+        header: () => <span>Line</span>,
         accessorFn: (row) => <div>{row.line}</div>,
         id: "Area",
         cell: (info) => {
@@ -248,7 +260,7 @@ const RenderTable = ({
         footer: (props) => props.column.id,
       },
       {
-        header: () => <span>Machine</span>,
+        header: () => <span>Machine Code</span>,
         accessorFn: (row) => <div>{row.line}</div>,
         id: "Machine",
         cell: (info) => {
@@ -322,23 +334,31 @@ const RenderTable = ({
     ],
     []
   );
-
   const [{ pageIndex, pageSize }, setPagination] =
     React.useState<PaginationState>({
-      pageIndex: 0,
-      pageSize: 33,
+      pageIndex: 1,
+      pageSize: 30,
     });
 
   const fetchDataOptions = {
     pageIndex,
     pageSize,
   };
+  const [page, setPage] = React.useState(0);
   const defaultData = React.useMemo(() => [], []);
+
   const dataQuery = useSWR(
     ["data", fetchDataOptions],
-    () => fetchApi(fetchDataOptions, mcData),
-    { keepPreviousData: true }
+    () => {
+      const data = fetchApi(fetchDataOptions, mcData, false, page);
+
+      setPage((e) => data.currentPage);
+      return data;
+    },
+    // { keepPreviousData: true }
+    { keepPreviousData: true, refreshInterval: 20000 }
   );
+
   const pagination = React.useMemo(
     () => ({
       pageIndex,
@@ -363,17 +383,25 @@ const RenderTable = ({
   });
   return (
     <div className="mx-2">
-      <table className="mt-4 w-full border-4">
-        <thead>
-          {/* <tr className="bg-green-100 ">Status</tr> */}
+      <table
+        className="mt-4 w-full border-4 "
+        style={{
+          borderRadius: "1em",
+          overflow: "hidden",
+        }}
+      >
+        <thead className=" h-10">
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr className="bg-green-100 " key={headerGroup.id}>
+            <tr
+              style={{ backgroundColor: "#0087DC", color: "white" }}
+              key={headerGroup.id}
+            >
               {headerGroup.headers.map((header) => {
                 // console.log(header);
 
                 return (
                   <th
-                    className="border-blue-500 border-2 "
+                    className="border-2"
                     style={{ fontSize: "1.7vh" }}
                     key={header.id}
                     colSpan={header.colSpan}
@@ -393,17 +421,44 @@ const RenderTable = ({
           ))}
         </thead>
         <tbody className="text-center">
-          {dataQuery.data?.rows.map((machine) => {
+          {dataQuery.data?.rows.map((machine, index) => {
+            let statusBg = "";
+            if (machine.status === "execute") {
+              statusBg = "bg-green-500 text-white";
+            } else if (machine.status === "idle") {
+              statusBg = "bg-yellow-500  text-white";
+            } else if (machine.status === "stopped") {
+              statusBg = "bg-red-500 text-white";
+            } else if (machine.status === "breakdown") {
+              statusBg = "bg-orange-500 text-white";
+            } else if (machine.status === "plan_downtime") {
+              statusBg = "bg-blue-500 text-white";
+            } else {
+              statusBg = "";
+            }
+
             return (
-              <tr key={machine.id}>
-                <td>{machine.status}</td>
-                <td>{machine.aera}</td>
+              <tr
+                className={`border-2 ${
+                  index % 2 != 0 ? "bg-white" : "bg-gray-300"
+                }`}
+                key={machine.id}
+              >
+                <td className="flex justify-center">
+                  <div
+                    className={`${statusBg} text-center  `}
+                    style={{ minWidth: "75%", margin: "1px 0px 1px 0px" }}
+                  >
+                    {machine.status}
+                  </div>
+                </td>
+                <td className="">{machine.aera}</td>
                 <td>{machine.line}</td>
                 <td>{machine.part}</td>
                 <td>{machine.target}</td>
                 <td>{machine.plan}</td>
                 <td>{machine.actual}</td>
-                <td>Start</td>
+                <td>{getStartTime(machine.produceTime)}</td>
                 <td>{machine.produceTime}</td>
                 <td>
                   {machine.oee}
@@ -413,56 +468,8 @@ const RenderTable = ({
               </tr>
             );
           })}
-
-          {/* {table.getRowModel().rows.map((row) => {
-            return (
-              <tr
-                key={row.id}
-                className={
-                  parseInt(row.id) % 2 === 0 ? " bg-white" : "bg-green-100"
-                }
-              >
-                {row.getVisibleCells().map((cell) => {
-                  return (
-                    <td
-                      className="text-center"
-                      style={{ fontSize: "1.58vh" }}
-                      key={cell.id}
-                    >
-                      {}
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })} */}
         </tbody>
       </table>
-
-      {/* <span className="flex items-center gap-1">
-          <div>Page</div>
-          <strong>
-            {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
-          </strong>
-        </span> */}
-
-      {/* <span className="flex items-center gap-1">
-          | Go to page:
-          <input
-            type="number"
-            defaultValue={table.getState().pagination.pageIndex + 1}
-            onChange={(e) => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0;
-              table.setPageIndex(page);
-            }}
-            className="border p-1 rounded w-16"
-          />
-        </span> */}
     </div>
   );
 };

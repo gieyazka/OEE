@@ -3,24 +3,15 @@ import useSWR, { Fetcher, Key, mutate } from "swr";
 import { Machine } from "../interface/machine";
 import axios from "axios";
 import dayjs from "dayjs";
-import { useRouter } from "next/router";
-
-const fetcher: Fetcher<any, string> = (url) => {
-  return axios.get(url).then((res) => res.data);
-};
-function multiFetcher(urls: any) {
-  return Promise.all(
-    urls.map((url: any) => {
-      return fetcher(url);
-    })
-  );
-}
+import { useRouter } from "next/navigation";
+import useSWRImmutable from "swr/immutable";
 
 const useSite = () => {
   const router = useRouter();
 
-  const { site } = router.query;
-  return (site as string)?.toUpperCase();
+  // const { site } = router.query;
+  // return (site as string)?.toUpperCase();
+  return "AA";
 };
 const useHost = () => {
   const origin =
@@ -31,13 +22,15 @@ const useHost = () => {
   const URL = `${origin}`;
   return URL;
 };
-const getShift = () => {
-  let currentTime = dayjs().format("HH:mm");
-  if (currentTime >= "08:00" && currentTime <= "19:59") {
-    return "Day Shift";
+
+const getServer = (site: string) => {
+  site = site.toUpperCase();
+  if (site === "ASP") {
+    return "http://10.40.10.209:1337";
   }
-  return "Night Shift";
+  return "http://10.20.10.209:1337";
 };
+
 const getBoolShift = () => {
   let currentTime = dayjs().format("HH:mm");
   if (currentTime >= "08:00" && currentTime <= "19:59") {
@@ -80,48 +73,29 @@ const getHours = () => {
 
 const fetchApi = (
   options: { pageIndex: number; pageSize: number },
-  data: any
+  data: any,
+  check: boolean,
+  page: number
 ) => {
+  let currentPage = page;
+  let totalPage = Math.ceil(data.length / options.pageSize);
+  if (currentPage !== totalPage) {
+    currentPage += 1;
+  } else {
+    currentPage = 1;
+  }
+
   const rows = data.slice(
-    options.pageIndex * options.pageSize,
-    (options.pageIndex + 1) * options.pageSize
+    (currentPage - 1) * options.pageSize,
+    (currentPage + 0) * options.pageSize
   );
   return {
     rows: [...rows],
-    pageCount: Math.ceil(data.length / options.pageSize),
+    pageCount: totalPage,
+    currentPage,
   };
 };
 
-const useAllmc = (url: string[]) => {
-  return useSWR(url, multiFetcher, {
-    refreshInterval: 30000,
-  });
-};
-const useStatusMc = ({
-  site,
-  line,
-  area,
-}: {
-  site: string;
-  line: string;
-  area: string;
-}) => {
-  const { data, error, isLoading } = useSWR(
-    useHost() + `/api/getStatus?site=${site}&area=${area}&line=${line}`,
-    fetcher,
-    { refreshInterval: 5000 }
-  );
-  return { data, error, isLoading };
-};
-
-const useData = (machine: any) => {
-  const { data, error, isLoading } = useSWR(
-    useHost() + `/api/intervalData?machine=${JSON.stringify(machine)}`,
-    fetcher
-    // { refreshInterval: 5000 }
-  );
-  return { data, error, isLoading };
-};
 const getHoursTime = (ampm: string) => {
   let hr = dayjs(`1/1/1 ${ampm.split(" ")[0]}:00 ${ampm.split(" ")[1]}`).format(
     "HH"
@@ -134,14 +108,69 @@ const getHoursTime = (ampm: string) => {
     endTime,
   };
 };
+
+const getStartTime = (produceTime: string) => {
+  if (produceTime === undefined || produceTime === null) {
+    return "";
+  }
+  if (produceTime === "No data") {
+    return produceTime;
+  }
+  let time = produceTime.split(":");
+  let hr = Math.abs(parseInt(time[0]));
+  let min = Math.abs(parseInt(time[1]));
+  let sec = Math.abs(parseInt(time[2]));
+  let startTime = dayjs()
+    .subtract(hr, "h")
+    .subtract(min, "m")
+    .subtract(sec, "s")
+    .format("HH:mm:ss");
+
+  return startTime;
+};
+
+const getAvgPercent = (sumPercentage: number, size: number, noData: number) => {
+  return Math.round(sumPercentage / (size - noData));
+};
+const getInfluxServer = (site: String) => {
+  if (site === "AA") {
+    return {
+      server: "http://10.20.10.209:8086",
+      token:
+        "4GES3Ky0_YZujUlsEEwpJ3lXdlqkfSyOJShxy9LOOE6FvDpQUZexbPmivibaFY8yeGQVbHEMvkQNFfzcWeuNNg==",
+    };
+  }
+  return {
+    server: "http://10.40.10.209:8086",
+    token:
+      "JXp-HDmJSZV8vLKh7z7GMEfXFl4rzLvDYnJ-cCmUK9sGQHsy1XJpbSuwiE4tNToZWzKQYjf9lksghlPx56mhLg==",
+  }; //ASP
+};
+
+const removeAttrlvl_one = (arrayFromAPi: any) => {
+  let newdata = [];
+  for (const element of arrayFromAPi.data) {
+    delete element.attributes.createdAt;
+    delete element.attributes.updatedAt;
+    newdata.push({
+      id: element.id,
+      ...element.attributes,
+    });
+
+    //TODO: fetch all data in here and useSWR to refreashData
+  }
+  return newdata;
+};
+
 export {
-  getShift,
   useSite,
   getHours,
   fetchApi,
   useHost,
-  useStatusMc,
-  useData,
-  useAllmc,
   getHoursTime,
+  getStartTime,
+  getAvgPercent,
+  getServer,
+  getInfluxServer,
+  removeAttrlvl_one,
 };

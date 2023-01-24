@@ -2,22 +2,25 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { getInfluxServer } from '../../control/controller';
 import { start } from 'repl';
 
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse<{}>
 ) {
-    const { site, line, area } = req.query;
+    const { site, line, area ,endTime} = req.query;
     if (req.method === "GET") {
-        // let query = `SELECT last("status") as status FROM "Performance" WHERE ("Area" = '${(area)}') AND  ("Site" = '${(site as string)}') AND  ("Line" = '${(line as string)}')  `;
-        let query = `SELECT last("status") as status, last("part_name") as part_name,last("actual_rate") as actual_rate ,last("target") as target , last("planrate") as plan ,  last("part_no") as part_no FROM "Performance" WHERE ("Area" = '${(area)}') AND  ("Site" = '${(site as string)}') AND  ("Line" = '${(line as string)}') `;
+        const {server,token} = getInfluxServer(site as String)
+        let where = ` ("Area" = '${(area)}') AND  ("Site" = '${(site as string)}') AND  ("Line" = '${(line as string)}')  and time <= ${endTime} `
+
+        let query = `SELECT last("actual_rate")  from Performance where ${where} `;
         let data = {
             method: "post",
-            url: `http://10.20.10.209:8086/query?db=smart_factory&q=${query}`,
+            url: `${server}/query?db=smart_factory&q=${query}`,
             headers: {
                 Authorization:
-                    "Token 4GES3Ky0_YZujUlsEEwpJ3lXdlqkfSyOJShxy9LOOE6FvDpQUZexbPmivibaFY8yeGQVbHEMvkQNFfzcWeuNNg==",
+                    `Token ${token}`,
             },
         };
         let getData = await axios(data);
