@@ -1,7 +1,17 @@
 import { Production_Line } from "../interface/machine";
 import XLSX from "xlsx-js-style";
+import { checkHeaderKey } from "./controller";
 
-const exportCSVFile = (items: Production_Line[]) => {
+const exportCSVFile = (
+  items: Production_Line[],
+  headerTable: { field: string; color: string; fontColor?: string }[]
+) => {
+  let removeUnUseHeader = headerTable;
+  // let removeUnUseHeader = headerTable.filter((d) => d.field !== "Shift");
+  // let formatData = items.map((production) => {
+  //   console.log(production);
+  // });
+  // return
   let wscolsArr: any = [];
   const wb = XLSX.utils.book_new();
   const allcomWb = XLSX.utils.book_new();
@@ -12,7 +22,7 @@ const exportCSVFile = (items: Production_Line[]) => {
       color: { rgb: "FFFFFF" },
     },
     fill: {
-      // bgColor: { rgb: "1D336D" },
+      fgColor: { rgb: "1D336D" },
     },
     border: {
       top: { style: "thin", color: { rgb: "000000" } },
@@ -38,11 +48,20 @@ const exportCSVFile = (items: Production_Line[]) => {
     // },
   };
 
-  const header = Object.keys(items[0]).map((key) => {
+  const header = removeUnUseHeader.map((key) => {
     return {
-      v: key,
+      v: checkHeaderKey(key.field),
       t: "s",
-      s: headerStyle,
+      s: {
+        ...headerStyle,
+        font: {
+          name: "Bai Jamjuree",
+          color: {
+            rgb: key.fontColor ? key.fontColor.replace("#", "") : "FFFFFF",
+          },
+        },
+        fill: { fgColor: { rgb: key.color.replace("#", "") } },
+      },
     };
   });
 
@@ -50,13 +69,26 @@ const exportCSVFile = (items: Production_Line[]) => {
 
   let row: any = [header];
   let objectMaxLength: any = [];
-  items.map((production, i: number) => {
-    const arrData = Object.keys(production).map((key) => {
-      // @ts-ignore
-      return { v: production[key], t: "s", s: rowStyle };
-    });
 
-    // padding data in column Excel
+  items.forEach((production, i: number) => {
+    const arrData = removeUnUseHeader.map((key) => {
+      //@ts-ignore
+      return { v: production[key.field], t: "s", s: rowStyle };
+    });
+    let value = Object.values(items[i]);
+
+    for (let j = 0; j < value.length; j++) {
+      // console.log(objectMaxLength[j] > value[j].length
+      //   ? objectMaxLength[j]
+      //   : value[j].length + 5);
+
+      if (value[j] !== null) {
+        objectMaxLength[j] =
+          objectMaxLength[j] > value[j].length
+            ? objectMaxLength[j]
+            : value[j].length + 15;
+      }
+    }
 
     allcomRow.push(arrData);
     row.push(arrData);
@@ -81,7 +113,7 @@ const exportCSVFile = (items: Production_Line[]) => {
       }
     });
   });
-  XLSX.writeFile(wb, `Machine Data` + ".xlsx" || "export.xlsx");
+  XLSX.writeFile(wb, `Production_report` + ".xlsx" || "export.xlsx");
 
   return null;
 };

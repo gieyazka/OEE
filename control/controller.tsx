@@ -162,8 +162,45 @@ const removeAttrlvl_one = (arrayFromAPi: any) => {
   return newdata;
 };
 
+const getMinutebySec = (sec: number) => {
+  const getsec = sec % 60 >= 30 ? 1 : 0;
+  return (Math.floor(sec / 60) + getsec).toString();
+};
+
+const checkHeaderKey = (key: string) => {
+  if(key === "P_Plan"){
+    return "Plan"
+  }
+  if(key === "Plan_Target"){
+    return "Target"
+  }
+  if(key === "PartName_Oracle"){
+    return "Part Name"
+  }
+  if(key === "CycleTime"){
+    return "CT(s)"
+  }
+  if(key === "Production_Time"){
+    return "Prod.Time(m)"
+  }
+  if(key === "Plan_downtime"){
+    return "P/D(m)"
+  }
+  if(key === "Running_Utilization"){
+    return "Running(m)"
+  }
+  if(key === "Idle_Utilization"){
+    return "Idle(m)"
+  }
+  if(key === "Stop_Utilization"){
+    return "Stop(m)"
+  }
+  return key;
+};
+
 export {
   useSite,
+  checkHeaderKey,
   getHours,
   fetchApi,
   useHost,
@@ -173,4 +210,5 @@ export {
   getServer,
   getInfluxServer,
   removeAttrlvl_one,
+  getMinutebySec,
 };

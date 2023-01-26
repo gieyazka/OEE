@@ -20,11 +20,12 @@ export interface Production_Line {
     Alias_Name: string;
     Plan_Target: string;
     Actual: string;
-    NG?: null;
+    NG?: string | null;
     Running_Utilization: string;
     Idle_Utilization: string;
     Stop_Utilization: string;
     Start: string;
+    Shift? : string | null;
     Stop: string;
     CycleTime: string;
     Performance: string;
@@ -36,7 +37,9 @@ export interface Production_Line {
     A_Plan: string;
     A_Actual: string;
     P_Plan: string;
+    Plan?: string;
     P_Actual: string;
     PartNo_Oracle?: null;
     PartName_Oracle: string;
+
   }
