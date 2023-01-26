@@ -149,7 +149,7 @@ const SelectShift = ({ label, state }: multiSelect) => {
         setValue({ ...value, shift: data });
       }}
       fullWidth
-      options={["Morning", "Evening"].map((option) => option.toString())}
+      options={["Day Shift", "Night Shift"].map((option) => option.toString())}
       renderOption={renderOption}
       value={value.shift}
       renderInput={(params) => <TextField {...params} label={label} />}

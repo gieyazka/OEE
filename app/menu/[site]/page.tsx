@@ -76,7 +76,7 @@ export default function MenuPage(props: { params: { site: string } }) {
   });
   const [filter, setFilter] = React.useState<filterData>({
     machine: [],
-    shift: "Morning",
+    shift: "Day Shift",
   });
 
   const [loading, setLoading] = React.useState(false);
@@ -146,7 +146,7 @@ export default function MenuPage(props: { params: { site: string } }) {
 
     let startTime = dayjs(d.Start, "DD-MM-YYYY HH:mm").hour();
 
-    if (filter.shift === "Morning") {
+    if (filter.shift === "Day Shift") {
       return startTime > 7 && startTime < 20;
     } else {
       return startTime > 19 || startTime < 8;
