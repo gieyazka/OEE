@@ -28,6 +28,10 @@ export default function MenuPage(props: { params: { site: string } }) {
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
+  React.useEffect(() => {
+    handleSearch().then();
+    setLoading(false);
+  }, []);
   // const handleClose = () => {
   //   setAnchorEl(null);
   // };
@@ -63,12 +67,12 @@ export default function MenuPage(props: { params: { site: string } }) {
 
   const site = props.params.site.toUpperCase();
   const [search, setSearch] = React.useState<searchData>({
-    startDate: null,
-    startHr: null,
-    startMin: null,
-    endDate: null,
-    endHr: null,
-    endMin: null,
+    startDate: dayjs().subtract(1, "day"),
+    startHr: "0",
+    startMin: "0",
+    endDate: dayjs(),
+    endHr: "23",
+    endMin: "59",
   });
   const [filter, setFilter] = React.useState<filterData>({
     machine: [],
@@ -176,8 +180,8 @@ export default function MenuPage(props: { params: { site: string } }) {
       production.Stop_Utilization = getMinutebySec(
         parseInt(production.Stop_Utilization)
       );
-      production.NG = production.NG ? production.NG : "-"
-      production.CycleTime = production.CycleTime ? production.CycleTime : "-"
+      production.NG = production.NG ? production.NG : "-";
+      production.CycleTime = production.CycleTime ? production.CycleTime : "-";
       return production;
     });
 
@@ -196,9 +200,7 @@ export default function MenuPage(props: { params: { site: string } }) {
   };
 
   React.useEffect(() => {
-    // if (searchData.length !== 0) {
     setState(filterData());
-    // }
   }, [searchData, filter]);
 
   return (
@@ -336,7 +338,7 @@ export default function MenuPage(props: { params: { site: string } }) {
   );
 }
 
-const headerTable: { field: string; color: string ,fontColor? : string }[] = [
+const headerTable: { field: string; color: string; fontColor?: string }[] = [
   { field: "Plant", color: "#9BBB59" },
   { field: "Production_Line", color: "#9BBB59" },
   { field: "Alias_Name", color: "#9BBB59" },
@@ -352,7 +354,7 @@ const headerTable: { field: string; color: string ,fontColor? : string }[] = [
   { field: "Production_Time", color: "#A6A6A6" },
   { field: "Plan_downtime", color: "#4F81BD" },
   { field: "Running_Utilization", color: "#00B050" },
-  { field: "Idle_Utilization", color: "#FFFF00" ,fontColor : 'black' },
+  { field: "Idle_Utilization", color: "#FFFF00", fontColor: "black" },
   { field: "Stop_Utilization", color: "#FF0000" },
   { field: "Availability", color: "#9BBB59" },
   { field: "Performance", color: "#9BBB59" },

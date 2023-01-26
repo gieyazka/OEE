@@ -2,11 +2,11 @@ import { Dayjs } from "dayjs";
 
 export interface searchData {
   startDate: Dayjs | null;
-  startHr: string | null;
-  startMin: string | null;
+  startHr: string ;
+  startMin: string ;
   endDate: Dayjs | null;
-  endHr: string | null;
-  endMin: string | null;
+  endHr: string ;
+  endMin: string ;
 }
 
 

@@ -24,6 +24,7 @@ interface multiSelect {
 
 const MuiDatePicker = ({ state, label, type }: input) => {
   const [value, setValue] = [...state];
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <DatePicker
@@ -59,6 +60,7 @@ const SelectHour = ({ label, state, type }: input) => {
       disableClearable
       options={hour.map((option) => option.toString())}
       renderOption={renderOption}
+      value={type === "start" ? value.startHr : value.endHr}
       onChange={(e: React.SyntheticEvent, data: string) => {
         if (type === "start") {
           setValue({ ...value, startHr: data });
@@ -90,6 +92,7 @@ const SelectMinute = ({ label, state, type }: input) => {
   return (
     <Autocomplete
       disableClearable
+      defaultValue={type === "start" ? value.startMin : value.endMin}
       onChange={(e: React.SyntheticEvent, data: string) => {
         if (type === "start") {
           setValue({ ...value, startMin: data });
@@ -131,7 +134,9 @@ const SelectMulti = ({ label, state, mcData }: multiSelect) => {
       options={mcNameArr.map((option) => option.toString())}
       renderOption={renderOption}
       value={value.machine}
-      renderInput={(params) => <TextField key={params.id} {...params} label={label} />}
+      renderInput={(params) => (
+        <TextField key={params.id} {...params} label={label} />
+      )}
     />
   );
 };
