@@ -198,11 +198,27 @@ const checkHeaderKey = (key: string) => {
   return key;
 };
 
+
+const getStringStatus = (status: string) => {
+  if (status === "execute") {
+    return "Execution";
+  } else if (status === "idle") {
+    return "Idle Time";
+  } else if (status === "stopped") {
+    return "Non-Produced";
+  } else if (status === "plan_downtime") {
+    return "Planned D/T";
+  } else {
+    return status;
+  }
+};
+
+
 export {
   useSite,
   checkHeaderKey,
   getHours,
-  fetchApi,
+  fetchApi,getStringStatus,
   useHost,
   getHoursTime,
   getStartTime,

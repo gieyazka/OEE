@@ -55,6 +55,15 @@ const useMachineName = (site: string) => {
   );
   return { data, error, isLoading };
 };
+const usePartList = (site: string) => {
+  const server = getServer(site);
+  const { data, error, isLoading } = useSWRImmutable(
+    `${server}/api/part-lists`,
+    fetcher
+    // { refreshInterval: 10000 }
+  );
+  return { data, error, isLoading };
+};
 
 const useProduction_Time = (site: string) => {
   const server = getServer(site);
@@ -105,7 +114,7 @@ const useData = (machine: any) => {
   return { data, error, isLoading };
 };
 export {
-  useMachineName,
+  useMachineName,usePartList,
   useProduction_Time,
   fetchProduction_Time,
   useStatusMc,

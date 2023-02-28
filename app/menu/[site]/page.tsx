@@ -76,7 +76,7 @@ export default function MenuPage(props: { params: { site: string } }) {
   });
   const [filter, setFilter] = React.useState<filterData>({
     machine: [],
-    shift: "Day Shift",
+    shift: null,
   });
 
   const [loading, setLoading] = React.useState(false);
@@ -155,6 +155,8 @@ export default function MenuPage(props: { params: { site: string } }) {
 
   const formatData = (items: Production_Line[]) => {
     const data = items.map((production) => {
+      // console.log(items);
+      
       let startTime = dayjs(production["Start"]).hour();
       if (startTime > 7 && startTime < 20) {
         production.Shift = "Day";
@@ -163,8 +165,10 @@ export default function MenuPage(props: { params: { site: string } }) {
       }
 
       production.Stop = dayjs(production.Stop).format("DD-MM-YYYY HH:mm");
-      production.Start = dayjs(production.Start).format("DD-MM-YYYY HH:mm");
+      production.Start = production.First_time ?  dayjs(production.First_time ).format("DD-MM-YYYY HH:mm") :dayjs(production.Start ).format("DD-MM-YYYY HH:mm") 
       // production.Plan = production.P_Plan;
+      // console.log(production.Production_Time);
+      
       production.Production_Time = getMinutebySec(
         parseInt(production.Production_Time)
       );

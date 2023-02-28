@@ -19,18 +19,19 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { Machine, PartList } from "../interface/machine";
 import React, { use, useEffect, useMemo, useState } from "react";
 import {
   fetchApi,
   getHours,
   getStartTime,
+  getStringStatus,
   useHost,
   useSite,
 } from "../control/controller";
 import useSWR, { mutate } from "swr";
 
 import { Bar } from "react-chartjs-2";
-import { Machine } from "../interface/machine";
 import axios from "axios";
 
 const OeeChart = (props: { className: string; avgPercentage: number }) => {
@@ -109,6 +110,7 @@ const MachineStatus = (props: {
     idle: number;
     stop: number;
     planDowntime: number;
+    nodata: number;
   };
 }) => {
   return (
@@ -153,6 +155,14 @@ const MachineStatus = (props: {
           </p>
           <p style={{ fontSize: "1.5vh" }} className="font-semibold">
             {props.sumMachine.stop}
+          </p>
+        </div>
+        <div className="flex justify-between ">
+          <p style={{ fontSize: "1.5vh" }} className="font-semibold">
+            No data
+          </p>
+          <p style={{ fontSize: "1.5vh" }} className="font-semibold">
+            {props.sumMachine.nodata}
           </p>
         </div>
       </div>
@@ -231,10 +241,12 @@ const RenderTable = ({
   machineName,
   masterData,
   mcData,
+  partList,
 }: {
   machineName: Machine[];
   masterData: any;
-  mcData: any;
+  mcData: Machine[];
+  partList: PartList[];
 }) => {
   const columns = React.useMemo<ColumnDef<any>[]>(
     () => [
@@ -323,6 +335,24 @@ const RenderTable = ({
         footer: (props) => props.column.id,
       },
       {
+        header: () => <span>A</span>,
+        accessorFn: (row) => row.firstName,
+        id: "OEE",
+        cell: (info) => {
+          return info.getValue();
+        },
+        footer: (props) => props.column.id,
+      },
+      {
+        header: () => <span>P</span>,
+        accessorFn: (row) => row.firstName,
+        id: "OEE",
+        cell: (info) => {
+          return info.getValue();
+        },
+        footer: (props) => props.column.id,
+      },
+      {
         header: () => <span>OEE</span>,
         accessorFn: (row) => row.firstName,
         id: "OEE",
@@ -337,27 +367,44 @@ const RenderTable = ({
   const [{ pageIndex, pageSize }, setPagination] =
     React.useState<PaginationState>({
       pageIndex: 1,
-      pageSize: 30,
+      pageSize: 20,
     });
 
   const fetchDataOptions = {
     pageIndex,
     pageSize,
   };
-  const [page, setPage] = React.useState(0);
+  const [page, setPage] = React.useState({ totalPage: 0, currentPage: 1 });
   const defaultData = React.useMemo(() => [], []);
 
-  const dataQuery = useSWR(
-    ["data", fetchDataOptions],
-    () => {
-      const data = fetchApi(fetchDataOptions, mcData, false, page);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPage((prev) => {
+        let currentPage = prev.currentPage;
+        let totalPage = Math.ceil(mcData.length / pageSize);
+        if (currentPage !== totalPage) {
+          currentPage = currentPage + 1;
+        } else {
+          currentPage = 1;
+        }
 
-      setPage((e) => data.currentPage);
-      return data;
-    },
-    // { keepPreviousData: true }
-    { keepPreviousData: true, refreshInterval: 20000 }
-  );
+        return { totalPage: totalPage, currentPage: currentPage };
+      });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // const dataQuery = useSWR(
+  //   ["data", fetchDataOptions],
+  //   () => {
+  //     const data = fetchApi(fetchDataOptions, mcData, false, page);
+
+  //     setPage((e) => data.currentPage);
+  //     return data;
+  //   },
+  //   // { keepPreviousData: true }
+  //   { keepPreviousData: true, refreshInterval: 20000 }
+  // );
 
   const pagination = React.useMemo(
     () => ({
@@ -366,12 +413,15 @@ const RenderTable = ({
     }),
     [pageIndex, pageSize]
   );
+  // console.log(dataQuery.data);
 
   const table = useReactTable({
     // data: masterData ?? defaultData,
-    data: dataQuery.data?.rows ?? defaultData,
+    data:
+      mcData.slice(pageSize * (pageIndex - 1), pageSize * pageIndex) ??
+      defaultData,
     columns,
-    pageCount: dataQuery.data?.pageCount ?? -1,
+    pageCount: page.totalPage ?? -1,
     state: {
       pagination,
     },
@@ -381,6 +431,7 @@ const RenderTable = ({
     // getPaginationRowModel: getPaginationRowModel(), // If only doing manual pagination, you don't need this
     debugTable: true,
   });
+
   return (
     <div className="mx-2">
       <table
@@ -421,57 +472,99 @@ const RenderTable = ({
           ))}
         </thead>
         <tbody className="text-center">
-          {dataQuery.data?.rows.map((machine, index) => {
-            let statusBg = "";
-            if (machine.status === "execute") {
-              statusBg = "bg-green-500 text-white";
-            } else if (machine.status === "idle") {
-              statusBg = "bg-yellow-500  text-white";
-            } else if (machine.status === "stopped") {
-              statusBg = "bg-red-500 text-white";
-            } else if (machine.status === "breakdown") {
-              statusBg = "bg-orange-500 text-white";
-            } else if (machine.status === "plan_downtime") {
-              statusBg = "bg-blue-500 text-white";
-            } else {
-              statusBg = "";
-            }
+          {mcData
+            .slice(
+              pageSize * (page.currentPage - 1),
+              pageSize * page.currentPage
+            )
+            .map((machine: Machine, index) => {
+              let statusBg = "";
+              if (machine.status === "execute") {
+                statusBg = "bg-green-500 text-white";
+              } else if (machine.status === "idle") {
+                statusBg = "bg-yellow-500  text-white";
+              } else if (machine.status === "stopped") {
+                statusBg = "bg-red-500 text-white";
+              } else if (machine.status === "breakdown") {
+                statusBg = "bg-orange-500 text-white";
+              } else if (machine.status === "plan_downtime") {
+                statusBg = "bg-blue-500 text-white";
+              } else {
+                statusBg = "";
+              }
+              let selectPart: PartList | undefined;
+              if (machine.part_no !== undefined) {
+                selectPart = partList.find(
+                  (d) =>
+                    d.Machine_Code === machine.line &&
+                    d.Program_No === machine.part_no.toString()
+                );
+              }
 
-            return (
-              <tr
-                className={`border-2 ${
-                  index % 2 != 0 ? "bg-white" : "bg-gray-300"
-                }`}
-                key={machine.id}
-              >
-                <td className="flex justify-center">
-                  <div
-                    className={`${statusBg} text-center  `}
-                    style={{ minWidth: "75%", margin: "1px 0px 1px 0px" }}
-                  >
-                    {machine.status}
-                  </div>
-                </td>
-                <td className="">{machine.aera}</td>
-                <td>{machine.line}</td>
-                <td>{machine.part}</td>
-                <td>{machine.target}</td>
-                <td>{machine.plan}</td>
-                <td>{machine.actual}</td>
-                <td>{getStartTime(machine.produceTime)}</td>
-                <td>{machine.produceTime}</td>
-                <td>
-                  {machine.oee}
-                  {typeof machine.oee === "number" && "%"}
-                </td>
-                {/* <td>{machine.actual - machine.plan}</td> */}
-              </tr>
-            );
-          })}
+              let Oee: string | number = "N/A";
+              if (
+                typeof machine.availability === "number" &&
+                typeof machine.performance === "number"
+              ) {
+                Oee = (
+                  (((machine.availability / 100) * machine.performance) / 100) *
+                  (selectPart !== undefined && selectPart!.Quality
+                    ? parseInt(selectPart!.Quality) / 100
+                    : 95)
+                ).toFixed(2);
+              }
+
+              return (
+                <tr
+                  className={`border-2 ${
+                    index % 2 != 0 ? "bg-white" : "bg-gray-300"
+                  }`}
+                  key={machine.id}
+                >
+                  <td className="flex justify-center">
+                    <div
+                      className={`${statusBg} text-center  `}
+                      style={{ minWidth: "75%", margin: "1px 0px 1px 0px" }}
+                    >
+                      {getStringStatus(machine.status)}
+                    </div>
+                  </td>
+                  <td className="">{machine.aera}</td>
+                  <td>{machine.line}</td>
+                  <td>{machine.part}</td>
+                  <td>{machine.target}</td>
+                  <td>{machine.plan}</td>
+                  <td>{machine.actual}</td>
+                  <td>{machine.actual == 0 ? "-" : machine.start} </td>
+                  <td>{machine.produceTime}</td>
+                  <td>
+                    {machine.availability}
+                    {typeof machine.availability === "number" && "%"}
+                  </td>
+                  <td>
+                    {machine.performance}
+                    {typeof machine.performance === "number" && "%"}
+                  </td>
+                  <td>
+                    {Oee}
+                    {typeof machine.oee === "number" && "%"}
+                  </td>
+                  {/* <td>{machine.actual - machine.plan}</td> */}
+                </tr>
+              );
+            })}
         </tbody>
       </table>
     </div>
   );
 };
 
-export { OeeChart, SumProduct, MachineStatus, HourChart, RenderTable };
+
+export {
+  OeeChart,
+  SumProduct,
+  MachineStatus,
+  HourChart,
+  RenderTable,
+
+};

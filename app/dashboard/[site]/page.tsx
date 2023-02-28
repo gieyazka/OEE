@@ -7,6 +7,7 @@ import {
   RenderTable,
   SumProduct,
 } from "../../../model/dashboard";
+import { Machine, PartList } from "../../../interface/machine";
 import {
   getAvgPercent,
   getHours,
@@ -20,13 +21,13 @@ import {
   useAllmc,
   useData,
   useMachineName,
+  usePartList,
 } from "../../../control/api";
 import { use, useEffect, useMemo } from "react";
 
 import Head from "next/head";
 import Image from "next/image";
 import { Inter } from "@next/font/google";
-import { Machine } from "../../../interface/machine";
 import { SWRConfig } from "swr";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -39,16 +40,12 @@ async function getMachine(url: string) {
   // You can return Date, Map, Set, etc.
   return res.json();
 }
-export default function Page(props: {
-  params: { site: string };
-  machineName: Machine[];
-  fallback: any;
-  intervalData: [];
-}) {
+export default function Page(props: { params: { site: string } }) {
   // SWR hooks inside the `SWRConfig` boundary will use those values.
   const site = props.params.site.toUpperCase();
 
   const machineName = useMachineName(site);
+  const partList = usePartList(site);
 
   let newMachine: Machine[] = [];
   if (machineName.data !== undefined) {
@@ -59,8 +56,19 @@ export default function Page(props: {
         id: element.id,
         ...element.attributes,
       });
-
-      //TODO: fetch all data in here and useSWR to refreashData
+    }
+    newMachine = (newMachine.filter(d => d.line !== "TTP" && d.line !== "SBK" &&  d.line !== "SSN"  && d.line !== "P1" && d.line !== "P5" && d.line !== "P6" && d.line !== "P7"  && d.line !== "P8"  && d.line !== "P9"));
+    
+  }
+  let newPartList: PartList[] = [];
+  if (partList.data !== undefined) {
+    for (const element of partList.data.data) {
+      delete element.attributes.createdAt;
+      delete element.attributes.updatedAt;
+      newPartList.push({
+        id: element.id,
+        ...element.attributes,
+      });
     }
   }
 
@@ -68,6 +76,7 @@ export default function Page(props: {
     shift: getShift(),
     site,
     machineName: newMachine,
+    partList: newPartList,
   };
 
   return (
@@ -85,11 +94,13 @@ export default function Page(props: {
 }
 export function Dashboard(props: {
   machineName: Machine[];
+  partList: PartList[];
   intervalData?: [];
   shift: string;
   site: string;
 }) {
   let machineName = props.machineName;
+  let partList = props.partList;
   let statusUrl: string[] = [];
   let produceUrl: string[] = [];
   let OeeUrl: string[] = [];
@@ -127,15 +138,18 @@ export function Dashboard(props: {
     idle: 0,
     stop: 0,
     planDowntime: 0,
+    nodata: 0,
   };
   for (let i = 0; i < machineName.length; i++) {
     machineName[i].status = statusMc.data && statusMc.data[i].status;
     machineName[i].part = statusMc.data && statusMc.data[i].part;
     machineName[i].actual = statusMc.data && statusMc.data[i].actual;
     machineName[i].target = statusMc.data && statusMc.data[i].target;
-    machineName[i].plan = statusMc.data && statusMc.data[i].plan;
+    machineName[i].start = statusMc.data && statusMc.data[i].start;
+    machineName[i].part_no = statusMc.data && statusMc.data[i].part_no;
     machineName[i].produceTime =
       produceMc.data && produceMc.data[i].produceTime;
+    machineName[i].plan = produceMc.data && produceMc.data[i].plan;
 
     if (statusMc.data) {
       if (typeof statusMc.data[i].target === "number") {
@@ -153,13 +167,17 @@ export function Dashboard(props: {
         sumMachine.idle += 1;
       } else if (statusMc.data[i].status === "plan_downtime") {
         sumMachine.planDowntime += 1;
-      } else {
+      } else if (statusMc.data[i].status === "stopped") {
         sumMachine.stop += 1;
+      } else {
+        sumMachine.nodata += 1;
       }
     }
 
     if (oeeMc.data) {
       machineName[i].oee = oeeMc.data && oeeMc.data[i].oee;
+      machineName[i].availability = oeeMc.data && oeeMc.data[i].availability;
+      machineName[i].performance = oeeMc.data && oeeMc.data[i].performance;
       if (typeof oeeMc.data[i].oee === "number") {
         sumPercentage += oeeMc.data[i].oee;
       } else {
@@ -214,10 +232,10 @@ export function Dashboard(props: {
               }}
             >
               <div style={{ width: "25vh" }}>
-                <OeeChart
+                {/* <OeeChart
                   avgPercentage={avgPercentage}
                   className=" mt-6 mx-auto"
-                />
+                /> */}
               </div>
             </div>
             <div
@@ -246,6 +264,7 @@ export function Dashboard(props: {
                 machineName={props.machineName}
                 masterData={[]} // use for ssr render
                 mcData={machineName}
+                partList={partList}
               />
             )}
           </div>

@@ -28,6 +28,7 @@ const MuiDatePicker = ({ state, label, type }: input) => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <DatePicker
+      inputFormat="DD/MM/YYYY"
         label={label}
         value={type === "start" ? value.startDate : value.endDate}
         onChange={(e) => {
