@@ -35,16 +35,17 @@ export default async function handler(
                     `Token ${token}`,
             },
         };
+        
         let getPlan = await axios(dataPlan);
 
         let objData = {
             name: line,
             part: getData.data.results[0].series !== undefined ? (getData.data.results[0].series[0].values[0][1] === null ? "" : getData.data.results[0].series[0].values[0][1].trim()) : '-',
-            actual: getData.data.results[0].series !== undefined ? getData.data.results[0].series[0].values[0][2] : '-',
-            target: getData.data.results[0].series !== undefined ? getData.data.results[0].series[0].values[0][3] : '-',
-            ct: getData.data.results[0].series !== undefined ? Math.round(getData.data.results[0].series[0].values[0][4]) : '-',
+            actual: getData.data.results[0].series !== undefined ? getData.data.results[0].series[0].values[0][2] : 0,
+            target: getData.data.results[0].series !== undefined ? getData.data.results[0].series[0].values[0][3] : 0,
+            ct: getData.data.results[0].series !== undefined ? Math.round(getData.data.results[0].series[0].values[0][4]) : 0,
             status: getData.data.results[0].series !== undefined ? getData.data.results[0].series[0].values[0][5] : '-',
-            plan: getPlan.data.results[0].series !== undefined ? Math.round(parseFloat(getPlan.data.results[0].series[0].values[0][1])) : 'No data',
+            plan: getPlan.data.results[0].series !== undefined ? Math.round(parseFloat(getPlan.data.results[0].series[0].values[0][1])) : 0,
             
             dif: 0
         }
